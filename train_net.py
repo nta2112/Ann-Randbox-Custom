@@ -20,7 +20,7 @@ from detectron2.config import get_cfg
 from detectron2.data import build_detection_train_loader
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, launch, create_ddp_model, \
     AMPTrainer, SimpleTrainer, hooks
-from detectron2.evaluation import COCOEvaluator, LVISEvaluator, verify_results
+from detectron2.evaluation import COCOEvaluator, DatasetEvaluators, LVISEvaluator, verify_results
 from detectron2.solver.build import maybe_add_gradient_clipping
 from detectron2.modeling import build_model
 
@@ -32,6 +32,7 @@ from randbox.util.model_ema import add_model_ema_configs, may_build_model_ema, m
 from detectron2.data import DatasetCatalog, MetadataCatalog
 from detectron2.data.datasets.coco import load_coco_json
 from randbox.pascal_voc_evaluation import PascalVOCDetectionEvaluator
+from randbox.open_world_coco_evaluation import OpenWorldCOCOEvaluator
 
 class Register:
     """用于注册自己的数据集"""
@@ -191,7 +192,12 @@ class Trainer(DefaultTrainer):
         if 'lvis' in dataset_name:
             return LVISEvaluator(dataset_name, cfg, True, output_folder)
         else:
-            return COCOEvaluator(dataset_name, cfg, True, output_folder)
+            return DatasetEvaluators(
+                [
+                    COCOEvaluator(dataset_name, cfg, True, output_folder),
+                    OpenWorldCOCOEvaluator(dataset_name, cfg),
+                ]
+            )
             
 
     @classmethod
