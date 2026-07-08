@@ -191,8 +191,7 @@ class Trainer(DefaultTrainer):
         if 'lvis' in dataset_name:
             return LVISEvaluator(dataset_name, cfg, True, output_folder)
         else:
-#             return COCOEvaluator(dataset_name, cfg, True, output_folder)
-            return PascalVOCDetectionEvaluator(dataset_name, cfg)
+            return COCOEvaluator(dataset_name, cfg, True, output_folder)
             
 
     @classmethod

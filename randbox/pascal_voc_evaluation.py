@@ -23,14 +23,7 @@ from detectron2.evaluation.evaluator import DatasetEvaluator
 import json
 np.set_printoptions(threshold=sys.maxsize)
 
-
-f = open('./datasets/t1/annotations/test.json', 'r')
-ground_truth = json.load(f)
-f.close()
-
-mapping ={}
-for each in ground_truth['images']:
-    mapping[each['id']]=each['file_name'].split('.')[0]
+mapping = {}
     
     
 class PascalVOCDetectionEvaluator(DatasetEvaluator):
@@ -453,7 +446,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     #     return tp, fp, 0
 #     print(2,image_ids)
     for d in range(nd):
-        R = class_recs[str(mapping[int(image_ids[d])])]
+        image_key = str(mapping.get(int(image_ids[d]), image_ids[d]))
+        R = class_recs[image_key]
         bb = BB[d, :].astype(float)
         ovmax = -np.inf
         BBGT = R["bbox"].astype(float)
@@ -533,7 +527,8 @@ def voc_eval(detpath, annopath, imagesetfile, classname, ovthresh=0.5, use_07_me
     # If so, it is an unknown object that was classified as known.
     is_unk = np.zeros(nd)
     for d in range(nd):
-        R = unknown_class_recs[str(mapping[int(image_ids[d])])]
+        image_key = str(mapping.get(int(image_ids[d]), image_ids[d]))
+        R = unknown_class_recs[image_key]
         bb = BB[d, :].astype(float)
         ovmax = -np.inf
         BBGT = R["bbox"].astype(float)
