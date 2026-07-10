@@ -210,21 +210,25 @@ class Trainer(DefaultTrainer):
 
     @classmethod
     def build_test_loader(cls, cfg, dataset_name):
-        # TEST.IMS_PER_BATCH is treated as images per GPU/process for eval.
+        # [PATCHED] Force real batched eval loader.
+        # TEST.IMS_PER_BATCH = total batch across all GPUs (detectron2 convention).
         dataset_dicts = get_detection_dataset_dicts(dataset_name, filter_empty=False)
         mapper = RandBoxDatasetMapper(cfg, is_train=False)
         dataset = MapDataset(DatasetFromList(dataset_dicts, copy=False), mapper)
-        per_gpu_batch = max(1, int(cfg.TEST.IMS_PER_BATCH))
+        world_size = max(1, comm.get_world_size())
+        total_batch = max(1, int(cfg.TEST.IMS_PER_BATCH))
+        per_gpu_batch = max(1, total_batch // world_size)
         sampler = InferenceSampler(len(dataset))
         batch_sampler = torch.utils.data.sampler.BatchSampler(
             sampler, per_gpu_batch, drop_last=False
         )
         logger = logging.getLogger(__name__)
         logger.info(
-            "Eval loader: TEST.IMS_PER_BATCH=%s per GPU, world_size=%s, "
-            "num_images=%s, num_batches_per_rank=%s",
+            "Eval loader: TEST.IMS_PER_BATCH=%s (total), world_size=%s, "
+            "per_gpu_batch=%s, num_images=%s, num_batches_per_rank=%s",
+            total_batch,
+            world_size,
             per_gpu_batch,
-            comm.get_world_size(),
             len(dataset),
             len(batch_sampler),
         )
