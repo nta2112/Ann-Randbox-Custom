@@ -100,6 +100,23 @@ class OpenWorldCOCOEvaluator(DatasetEvaluator):
         for pred in predictions:
             pred_by_class[pred["category_id"]].append(pred)
 
+        # Debug: count predictions per class and unknown predictions
+        pred_counts = {class_id: len(preds) for class_id, preds in pred_by_class.items()}
+        unknown_preds = len(pred_by_class.get(self.unknown_class_index, []))
+        gt_unknown = len(gt_by_class.get(self.unknown_class_index, {}))
+        self._logger.info(
+            "Open-world COCO pred counts: unknown=%s, total_classes_with_preds=%s", unknown_preds, len(pred_counts)
+        )
+        self._logger.info("Open-world COCO unknown GT images: %s", gt_unknown)
+        if unknown_preds == 0:
+            top_pred_classes = sorted(pred_counts.items(), key=lambda x: -x[1])[:10]
+            self._logger.warning(
+                "No predictions for unknown class %s. Top predicted classes: %s. Unknown metrics will be 0 unless model predicts class %s.",
+                self.unknown_class_index,
+                top_pred_classes,
+                self.unknown_class_index,
+            )
+
         class_metrics = {}
         for class_id in range(self.total_num_class):
             class_metrics[class_id] = self._evaluate_class(
