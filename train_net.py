@@ -195,13 +195,11 @@ class Trainer(DefaultTrainer):
         if 'lvis' in dataset_name:
             return LVISEvaluator(dataset_name, cfg, True, output_folder)
         else:
-            return DatasetEvaluators(
-                [
-                    COCOEvaluator(dataset_name, cfg, True, output_folder),
-                    OpenWorldCOCOEvaluator(dataset_name, cfg),
-                ]
-            )
-            
+            # COCOEvaluator is intentionally removed: it asserts category_id < num_classes,
+            # which fails when the model predicts cross-task classes (e.g. class=33 on task-1
+            # which only has 28 categories). OpenWorldCOCOEvaluator handles this correctly.
+            return OpenWorldCOCOEvaluator(dataset_name, cfg)
+
 
     @classmethod
     def build_train_loader(cls, cfg):
