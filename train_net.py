@@ -17,7 +17,10 @@ import detectron2.utils.comm as comm
 from detectron2.utils.logger import setup_logger
 from detectron2.checkpoint import DetectionCheckpointer
 from detectron2.config import get_cfg
-from detectron2.data import build_detection_train_loader
+from detectron2.data import build_detection_train_loader, get_detection_dataset_dicts
+from detectron2.data.common import DatasetFromList, MapDataset
+from detectron2.data.build import trivial_batch_collator
+from detectron2.data.samplers import InferenceSampler
 from detectron2.engine import DefaultTrainer, default_argument_parser, default_setup, launch, create_ddp_model, \
     AMPTrainer, SimpleTrainer, hooks
 from detectron2.evaluation import COCOEvaluator, DatasetEvaluators, LVISEvaluator, verify_results
@@ -204,6 +207,33 @@ class Trainer(DefaultTrainer):
     def build_train_loader(cls, cfg):
         mapper = RandBoxDatasetMapper(cfg, is_train=True)
         return build_detection_train_loader(cfg, mapper=mapper)
+
+    @classmethod
+    def build_test_loader(cls, cfg, dataset_name):
+        # TEST.IMS_PER_BATCH is treated as images per GPU/process for eval.
+        dataset_dicts = get_detection_dataset_dicts(dataset_name, filter_empty=False)
+        mapper = RandBoxDatasetMapper(cfg, is_train=False)
+        dataset = MapDataset(DatasetFromList(dataset_dicts, copy=False), mapper)
+        per_gpu_batch = max(1, int(cfg.TEST.IMS_PER_BATCH))
+        sampler = InferenceSampler(len(dataset))
+        batch_sampler = torch.utils.data.sampler.BatchSampler(
+            sampler, per_gpu_batch, drop_last=False
+        )
+        logger = logging.getLogger(__name__)
+        logger.info(
+            "Eval loader: TEST.IMS_PER_BATCH=%s per GPU, world_size=%s, "
+            "num_images=%s, num_batches_per_rank=%s",
+            per_gpu_batch,
+            comm.get_world_size(),
+            len(dataset),
+            len(batch_sampler),
+        )
+        return torch.utils.data.DataLoader(
+            dataset,
+            num_workers=cfg.DATALOADER.NUM_WORKERS,
+            batch_sampler=batch_sampler,
+            collate_fn=trivial_batch_collator,
+        )
 
     @classmethod
     def build_optimizer(cls, cfg, model):
