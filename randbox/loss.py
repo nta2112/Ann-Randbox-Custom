@@ -371,6 +371,7 @@ class HungarianMatcherDynamicK(nn.Module):
         self.cost_giou = cost_giou
         self.use_focal = use_focal
         self.use_fed_loss = cfg.MODEL.RandBox.USE_FED_LOSS
+        self.num_classes = cfg.MODEL.RandBox.NUM_CLASSES
         self.ota_k = cfg.MODEL.RandBox.OTA_K
         self.forward_k = cfg.MODEL.RandBox.FORWARD_K
         if self.use_focal:
@@ -484,7 +485,7 @@ class HungarianMatcherDynamicK(nn.Module):
         unknown_targets=[]
         for i,unknown_label in enumerate(unknown_labels):
 
-            unity_label = [80]*len(unknown_label)
+            unity_label = [self.num_classes - 1]*len(unknown_label)
             unity_boxes = targets[i]['image_size_xyxy'].unsqueeze(0)
             unity_boxes_xyxy = targets[i]['image_size_xyxy'].unsqueeze(0)
             unity_image_size_xyxy_tgt = targets[i]['image_size_xyxy'].unsqueeze(0)
