@@ -57,10 +57,19 @@ class OpenWorldCOCOEvaluator(DatasetEvaluator):
         self.prev_intro_cls = cfg.TEST.PREV_INTRODUCED_CLS
         self.curr_intro_cls = cfg.TEST.CUR_INTRODUCED_CLS
         self.total_num_class = cfg.MODEL.RandBox.NUM_CLASSES
-        self.unknown_class_index = self.total_num_class - 1
         self.num_seen_classes = self.prev_intro_cls + self.curr_intro_cls
 
-        self._class_names = getattr(self._metadata, "thing_classes", None)
+        self._class_names = list(getattr(self._metadata, "thing_classes", []))
+        self.unknown_class_index = self.total_num_class - 1
+        if hasattr(self._metadata, "thing_dataset_id_to_contiguous_id"):
+            self.unknown_class_index = self._metadata.thing_dataset_id_to_contiguous_id.get(
+                self.unknown_class_index,
+                self.unknown_class_index,
+            )
+        if self._class_names and "unknown" in self._class_names:
+            self.unknown_class_index = self._class_names.index("unknown")
+
+        self._logger.info("OpenWorldCOCOEvaluator: unknown_class_index=%s", self.unknown_class_index)
 
     def reset(self):
         self._predictions = []
